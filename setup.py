@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name             = 'django-s3files',
-    version          = '0.0.1',
+    version          = '0.0.3',
     description      = 'Django AWS S3 File Manager enables you to manage files directly from the Django admin '
                        'interface, allowing you to read, upload, and delete files without directly accessing AWS.',
     author           = 'RunByKim',

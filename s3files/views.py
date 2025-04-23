@@ -22,7 +22,7 @@ def list_s3_files(request):
 
     # Get current directory from query parameter or use base prefix
     current_path = unquote(request.GET.get('path', base_prefix))
-    if not current_path.endswith('/'):
+    if current_path and not current_path.endswith('/'):
         current_path += '/'
 
     # Ensure we don't go above base directory
