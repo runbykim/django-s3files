@@ -13,6 +13,7 @@ setup(
     install_requires = ['boto3>=1.37.38'],
 	include_package_data=True,
 	packages         = find_packages(include=['s3files', 's3files.*']),
+    package_data     = {'s3files': ['templates/*.html']},
     keywords         = ['django', 'aws', 's3', 'media', 'file', 'manager', 'django-storage'],
     python_requires  = '>=3',
     zip_safe         = False,
