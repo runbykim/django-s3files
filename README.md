@@ -29,7 +29,7 @@ pip install django-s3files
 - `AWS_SECRET_ACCESS_KEY` (required)
 - `AWS_S3_REGION_NAME` (required)
 - `AWS_STORAGE_BUCKET_NAME` (required)
-- `AWS_STORAGE_BASE_DIR` (default: '/')
+- `AWS_STORAGE_BASE_DIR` (default: '')
 
 ## Dependencies
 
