@@ -5,12 +5,14 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.admin.views.main import PAGE_VAR, ALL_VAR
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 
-from .settings import AWS_STORAGE_BASE_DIR
+from .settings import AWS_STORAGE_BASE_DIR, PER_PAGE, SHOW_THUMBNAILS
 from .utils import get_s3_client
 
 
@@ -53,17 +55,17 @@ def list_s3_files(request):
 
     try:
         # List all objects with the current prefix
-        paginator = s3_client.get_paginator('list_objects_v2')
-        page_iterator = paginator.paginate(
+        s3paginator = s3_client.get_paginator('list_objects_v2')
+        s3page_iterator = s3paginator.paginate(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,
             Prefix=current_path,
             Delimiter='/'
         )
 
-        for page in page_iterator:
+        for s3page in s3page_iterator:
             # Handle directories
-            if 'CommonPrefixes' in page:
-                for prefix in page['CommonPrefixes']:
+            if 'CommonPrefixes' in s3page:
+                for prefix in s3page['CommonPrefixes']:
                     dir_path = prefix['Prefix']
                     dir_name = dir_path[len(current_path):-1]  # Remove current path prefix and trailing slash
                     if not search_query or search_query in dir_name.lower():
@@ -74,8 +76,8 @@ def list_s3_files(request):
                         })
 
             # Handle files
-            if 'Contents' in page:
-                for item in page['Contents']:
+            if 'Contents' in s3page:
+                for item in s3page['Contents']:
                     # print_debug(item)
                     file_path = item['Key']
                     # Skip if it's the current directory marker
@@ -131,18 +133,32 @@ def list_s3_files(request):
                 'path': current_breadcrumb
             })
 
-    # Combine and sort directories and files
     all_items = directories + files
     all_items.sort(key=lambda x: (x['type'] != 'directory', x['name'].lower()))
 
+    # Add pagination
+    paginator = Paginator(all_items, PER_PAGE)
+    page_num = request.GET.get(PAGE_VAR, 1)
+    pagination_required = paginator.num_pages > 1
+    page_range = paginator.get_elided_page_range(page_num) if pagination_required else []
+    page_obj = paginator.get_page(page_num)
+
     return render(request, 's3_files.html', {
-        'items': all_items,
+        'title': 'Django AWS S3 File Manager',
         'current_path': current_path,
         'breadcrumbs': breadcrumbs,
         'search_query': search_query,
         'base_prefix': base_prefix,
-        'title': 'Django AWS S3 File Manager',
+        'show_result_count': bool(search_query),
+        'show_thumbnails': SHOW_THUMBNAILS,
+        'items': page_obj.object_list,
+        'pagination_required': pagination_required,
+        'paginator': paginator,
         'result_count': len(all_items),
+        'page_range': page_range,
+        'page_num': page_num,
+        'ALL_VAR': ALL_VAR,
+        'per_page': PER_PAGE,
     })
 
 

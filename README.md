@@ -16,7 +16,7 @@ pip install django-s3files
 ## Settings
 1. Add `django-s3files` to your `INSTALLED_APPS` in `settings.py`.
 
-2. Add include url above your admin url.
+2. Add include url above your admin url. You can change the url as you wish.
     ```python
     urlpatterns = [
         path('admin/s3files/', include('s3files.urls')),
@@ -29,16 +29,19 @@ pip install django-s3files
 - `AWS_SECRET_ACCESS_KEY` (required)
 - `AWS_S3_REGION_NAME` (required)
 - `AWS_STORAGE_BUCKET_NAME` (required)
-- `AWS_STORAGE_BASE_DIR` (default: '')
+- `AWS_STORAGE_BASE_DIR` (str: '')
+- `PER_PAGE` (int: 25)
+- `SHOW_THUMBNAILS` (bool: False)
+
+## URL
+
+Your file manager URL will be the `include` URL defined in step 2 of the settings, followed by `/browse`.  
+For example: `https://example.com/admin/s3files/browse`.
 
 ## Dependencies
 
 The package works with any version of Python 3, tested with Django==4.2, and requires boto3==1.37.38.
 Other versions have not been tested.
-
-## Features
-- Highlight key features of the application.
-- Example: User authentication, API integrations, or other specific functionalities.
 
 ## Contributing
 

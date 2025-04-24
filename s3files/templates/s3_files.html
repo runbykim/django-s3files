@@ -1,7 +1,5 @@
-{% extends "admin/base_site.html" %}
-{% load i18n static %}
-
-{% block title %}File Manager{% endblock title  %}
+{% extends "admin/change_list.html" %}
+{% load i18n static admin_list s3files_extras %}
 
 {% block extrastyle %}
     {{ block.super }}
@@ -27,113 +25,142 @@
     </div>
 {% endblock %}
 
-{% block content %}
-    <div id="content-main">
-
-        <!-- Upload -->
-        <div class="module">
-            <h2 class="module-title">{% trans "Upload" %}</h2>
-            <div id="toolbar">
-                <div class="search-tools">
-                    <form method="POST" enctype="multipart/form-data" class="upload-form styled-form">
-                        {% csrf_token %}
-                        <div class="actions">
-                            <input type="file" name="upload" class="input-file" required>
-                            <button type="submit" class="button" title="Upload">{% trans 'Upload' %}</button>
-                        </div>
-                    </form>
-                </div>
+{% block object-tools %}
+    <div class="module">
+        <h2 class="module-title">{% trans "Upload" %}</h2>
+        <div id="toolbar">
+            <div class="search-tools">
+                <form method="POST" enctype="multipart/form-data" class="upload-form styled-form">
+                    {% csrf_token %}
+                    <div class="actions">
+                        <input type="file" name="upload" class="input-file" required>
+                        <button type="submit" class="button" title="Upload">{% trans 'Upload' %}</button>
+                    </div>
+                </form>
             </div>
-        </div>
-
-        <div class="module">
-            <h2 class="module-title">{% trans "Search" %}</h2>
-            <div id="toolbar">
-                <div class="search-tools">
-                    <form id="changelist-search" method="get">
-                        <div>
-                            <label for="searchbar"><img src="/static/admin/img/search.svg" alt="Search"></label>
-
-                            <input type="hidden" name="path" value="{{ current_path }}">
-
-                            <input type="text" name="search" size="40"
-                                   placeholder="{% trans 'Search files and folders' %}"
-                                   value="{{ search_query }}">
-                            <input type="submit" value="{% trans 'Search' %}">
-                            <span class="small quiet">
-                                {% blocktranslate count counter=result_count %}
-                                    {{ counter }} result{% plural %}{{ counter }} results
-                                {% endblocktranslate %} (<a href="?">{% translate "Show all" %}</a>)</span>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- File Browser -->
-        <div class="change-list">
-            <table id="result_list">
-                <thead>
-                <tr>
-                    <th scope="col" class="column-header">{% trans 'Type' %}</th>
-                    <th scope="col" class="column-header"></th>
-                    <th scope="col" class="column-header">{% trans 'Name' %}</th>
-                    <th scope="col" class="column-header">{% trans 'Size' %}</th>
-                    <th scope="col" class="column-header">{% trans 'Date' %}</th>
-                    <th scope="col" class="column-header"></th>
-                    <th scope="col" class="column-header"></th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for item in items %}
-                    <tr class="{% cycle 'row1' 'row2' %}">
-                        <td>
-                            {% if item.type == 'directory' %}
-                                <i>{% trans "Folder" %}</i>
-                            {% else %}
-                                {{ item.type|title }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.type == 'image' %}
-                                <img src="{{ item.url }}" alt="View Image" width="60" loading="lazy">
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.type == "directory" %}
-                                <a href="?path={{ item.path|urlencode }}">{{ item.name }}/</a>
-                            {% else %}
-                                <a href="{{ item.url }}" download="">{{ item.name }}</a>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.type != 'directory' %}
-                                {{ item.size|filesizeformat }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.type != 'directory' %}
-                                {{ item.last_modified|date:"M d, Y" }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.type != 'directory' %}
-                                <a href="{{ item.url }}" target="_blank" class="button-link">{% trans "Download" %}</a>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.type != 'directory' %}
-                                <a href="{% url 'delete_s3_file' item.path %}"
-                                   class="deletelink">{% trans "Delete" %}</a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
         </div>
     </div>
-{% endblock content %}
+{% endblock object-tools %}
+
+{% block search %}
+    <div class="module">
+        <div id="toolbar">
+            <div class="search-tools">
+                <form id="changelist-search" method="get">
+                    <div>
+                        <label for="searchbar"><img src="/static/admin/img/search.svg" alt="Search"></label>
+
+                        <input type="hidden" name="path" value="{{ current_path }}">
+
+                        <input type="text" name="search" size="40"
+                               placeholder="{% trans 'Search files and folders' %}"
+                               value="{{ search_query }}">
+                        <input type="submit" value="{% trans 'Search' %}">
+                        {% if show_result_count %}
+                        <span class="small quiet">
+                            {% blocktranslate count counter=result_count %}
+                                {{ counter }} result{% plural %}{{ counter }} results
+                            {% endblocktranslate %} (<a href="?path={{ current_path }}">{% translate "clear search" %}</a>)
+                        </span>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock search %}
+
+{% block result_list %}
+    <div class="results">
+        <table id="result_list">
+            <thead>
+            <tr>
+                <th scope="col" class="column-header">
+                    <div class="text" style="padding: 8px 10px;">{% trans 'Type' %}</div>
+                </th>
+                {% if show_thumbnails %}
+                <th scope="col" class="column-header">
+                    <div class="text" style="padding: 8px 10px">{% trans 'Thumbanils' %}</div>
+                </th>
+                {% endif %}
+                <th scope="col" class="column-header">
+                    <div class="text" style="padding: 8px 10px;">{% trans 'Name' %}</div>
+                </th>
+                <th scope="col" class="column-header">
+                    <div class="text" style="padding: 8px 10px;">{% trans 'Size' %}</div>
+                </th>
+                <th scope="col" class="column-header">
+                    <div class="text" style="padding: 8px 10px;">{% trans 'Date' %}</div>
+                </th>
+                <th scope="col" class="column-header"></th>
+                <th scope="col" class="column-header"></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in items %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>
+                        {% if item.type == 'directory' %}
+                            <i>{% trans "Folder" %}</i>
+                        {% else %}
+                            {{ item.type|title }}
+                        {% endif %}
+                    </td>
+                    {% if show_thumbnails %}
+                    <td>
+                        {% if item.type == 'image' %}
+                            <img src="{{ item.url }}" alt="View Image" width="60" loading="lazy">
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                    <td>
+                        {% if item.type == "directory" %}
+                            <a href="?path={{ item.path|urlencode }}">{{ item.name }}/</a>
+                        {% else %}
+                            <a href="{{ item.url }}" download="">{{ item.name }}</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.type != 'directory' %}
+                            {{ item.size|filesizeformat }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.type != 'directory' %}
+                            {{ item.last_modified|date:"M d, Y" }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.type != 'directory' %}
+                            <a href="{{ item.url }}" target="_blank" class="button-link">{% trans "Download" %}</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.type != 'directory' %}
+                            <a href="{% url 'delete_s3_file' item.path %}"
+                               class="deletelink">{% trans "Delete" %}</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+
+{% block filters %}{% endblock %}
+
+{% block pagination %}
+    <p class="paginator" style="width: auto;">
+        {% if pagination_required %}
+            {% for i in page_range %}
+                {% s3files_paginator_number paginator page_num i current_path %}
+            {% endfor %}
+        {% endif %}
+        {{ result_count }} {% if result_count == 1 %}item{% else %}items{% endif %}
+        <span style="float: right;">show {{ per_page }} per page {{ page_num }}</span>
+    </p>
+{% endblock %}
 
 {% block extrahead %}
     {{ block.super }}
