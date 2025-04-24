@@ -6,6 +6,10 @@ Django AWS S3 File Manager enables you to manage files directly from the Django 
 upload, and delete files without directly accessing AWS.  
 It seamlessly integrates with [django-storages](https://github.com/jschneier/django-storages.git).
 
+**Documents**
+- PyPI https://pypi.org/project/django-s3files/
+- Github https://github.com/runbykim/django-s3files
+
 ## Installation
 
 Installing from PyPI is as easy as doing:
